@@ -182,8 +182,18 @@ fn github_manifests_pass_through_and_grok_is_rewritten() {
     );
     let abs_win = rewrite_hook_commands_for_platform(&grok, ".grok", r"C:\Users\alice", true, true);
     let abs_launcher = skill_launcher(r"C:\Users\alice", ".grok");
-    let abs_cmd = format!("{abs_launcher}.cmd").replace('/', "\\");
-    let abs_q = serde_json::to_string(&abs_cmd).unwrap();
+    // Quote first, then flip remaining `/` to `\`. That is the order
+    // `grok_windows_hook_command` uses; converting the raw path first does
+    // not commute when skill_root already contains backslashes (Unix join
+    // keeps them and inserts `/` between segments).
+    let abs_cmd = format!("{abs_launcher}.cmd");
+    let abs_q = json_string(&abs_cmd).replace('/', "\\");
+    #[cfg(unix)]
+    assert_ne!(
+        abs_q,
+        json_string(&abs_cmd.replace('/', "\\")),
+        "slash-flip and JSON quoting must not be reordered"
+    );
     let abs_windows = format!("cmd /c if exist {abs_q} {abs_q} hook");
     assert_eq!(
         abs_win["hooks"]["PostToolUse"][0]["hooks"][0]["command"],

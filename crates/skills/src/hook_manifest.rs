@@ -197,6 +197,12 @@ pub fn windows_hook_command(quoted: &QuotedPath, provider: &str) -> String {
 /// JS: grokWindowsLauncherCommand. `cmd /c if exist "p" "p" verb` (no extra
 /// wrapping quotes, no doubled inner quotes, backslash paths) is parseable
 /// by PowerShell, cmd.exe, and Git Bash. See `transformers/hooks.js`.
+///
+/// The slash flip runs on the already-JSON-quoted path. `/` is not JSON-escaped,
+/// so a relative command keeps a single `\`; converting the raw path first
+/// would JSON-escape those into `\\` and break `GROK_SHELL=cmd`. The two
+/// orders also disagree on a mixed-separator absolute path (a Windows
+/// `skill_root` joined on Unix).
 fn grok_windows_hook_command(quoted_cmd_path: &str, verb: &str) -> String {
     let q = quoted_cmd_path.replace('/', "\\");
     format!("cmd /c if exist {q} {q} {verb}")
